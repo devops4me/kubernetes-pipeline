@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: sonardb
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            pod-type: sonardb
+    template:
+        metadata:
+            name: sonardb
+            labels:
+                pod-type: sonardb
+        spec:
+            containers:
+            -   name: vm-sonardb
+                image: postgres:11.2
+                env:
+                -   name: POSTGRES_USER
+                    value: "sonar_rw_xyz123abc"
+                -   name: POSTGRES_PASSWORD
+                    value: "xyzP23FSsd8ffa8So2bJw4so"
+                -   name: POSTGRES_DB
+                    value: "sonar_db_hyqlbi"
+                ports:
+                -   containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: sonardb
+spec:
+    ports:
+    - port: 5432
+      targetPort: 5432
+    selector:
+        pod-type: sonardb

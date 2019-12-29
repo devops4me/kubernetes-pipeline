@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: registry
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            pod-type: registry
+    template:
+        metadata:
+            name: registry
+            labels:
+                pod-type: registry
+        spec:
+            containers:
+            -   name: vm-registry
+                image: registry:latest
+                ports:
+                -   containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: registry
+spec:
+    ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+    selector:
+        pod-type: registry
