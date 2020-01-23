@@ -83,16 +83,37 @@ Go to a scratch folder on the machine and run these commands.
 ```
 safe login <<book>>
 safe open <<chapter>> <<verse>>
-safe eject github.ssh.config
-safe eject safedb.code.private.key
+safe open github devops4me
+safe write github.ssh.config # remove any extraneous config sections
+safe write safedb.code.private.key
 chmod 600 safedb.code.private.key.pem
-kubectl create secret generic safedbgitsshconfig \
-    --from-file=config=$PWD/github.ssh.config
-rm github.ssh.config
-kubectl create secret generic safedbgitsshkey \
+kubectl create secret generic safegitsshconfig \
+    --from-file=config=$PWD/config
+rm config
+kubectl create secret generic safegitsshkey \
     --from-file=safedb.code.private.key.pem=$PWD/safedb.code.private.key.pem
 rm safedb.code.private.key.pem
+kubectl get secret safegitsshconfig --output=yaml
+kubectl get secret safegitsshkey --output=yaml
 ```
+
+### Verify the Git SSH Credentials
+
+We verify the git push credentials within the **[safedb.net Jenkinsfile](https://github.com/devops4me/safedb.net/blob/master/Jenkinsfile)** in the rubygem deploy stage right before the **`gem bump --release`** command.
+
+#### ssh -i ~/.ssh/safedb.code.private.key.pem -vT git@safedb.code
+
+If the **ssh to github** verification works - we can be confident that the kubernetes secrets have been correctly configured.
+
+### Set the Git Push Upstream Url
+
+The **[safedb.net Jenkinsfile](https://github.com/devops4me/safedb.net/blob/master/Jenkinsfile)** must configure the **remote url for git push** just before the git push is done.
+
+#### git remote set-url --push origin git@safedb.code:devops4me/safedb.net.git
+
+### Running Without Credentials
+
+It is important for Jenkins jobs to complete safely without credentials as long as they are not in a given branch (usually master). This allows the team to run the jobs locally from development branches without a deployment happening.
 
 
 ---
