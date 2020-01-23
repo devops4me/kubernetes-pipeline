@@ -97,6 +97,59 @@ kubectl get secret safegitsshconfig --output=yaml
 kubectl get secret safegitsshkey --output=yaml
 ```
 
+## Step 5 | Check the Pod Yaml Definitions
+
+This is an example of a Pod's Yaml definition that uses the **`.ssh/config`** and the **`ssh private key`** created above.
+
+```
+metadata:
+    labels:
+        pod-type: jenkins-worker
+spec:
+    containers:
+    -   name: jnlp
+        env:
+        -   name: CONTAINER_ENV_VAR
+            value: jnlp
+    -   name: safehaven
+        image: devops4me/haven:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        -   name: gitsshconfig
+            mountPath: /root/gitsshconfig
+        -   name: gitsshkey
+            mountPath: /root/gitsshkey
+        command:
+        -   cat
+        tty: true
+        env:
+        -   name: CONTAINER_ENV_VAR
+            value: safehaven
+    volumes:
+        -   name: gitsshconfig
+            secret:
+                secretName: safegitsshconfig
+        -   name: gitsshkey
+            secret:
+                secretName: safegitsshkey
+                defaultMode: 256
+```
+
+### Important Points
+
+Note that
+
+- we do not use **`~`** because kubernetes does not understand it
+- we do not map to **`/root/.ssh`** as this folder will be read only and known hosts writing will fail
+- in the Jenkinsfile we copy **`/root/gitsshconfig/config`** to the expected **`/root/.ssh/config`**
+- inside the config file we have specified the **`/root/gitsshkey/<<private-key-name.pem>>`** location
+- we use **`defaultMode: 256`** to set the **`0400`** file permissions for the key
+
+
+## Step 6 | Check the Jenkinsfile Definitions
+
+Within the Jenkinsfile we need to take care of a number of issues.
+
 ### Verify the Git SSH Credentials
 
 We verify the git push credentials within the **[safedb.net Jenkinsfile](https://github.com/devops4me/safedb.net/blob/master/Jenkinsfile)** in the rubygem deploy stage right before the **`gem bump --release`** command.
@@ -119,7 +172,7 @@ It is important for Jenkins jobs to complete safely without credentials as long 
 ---
 
 
-## Step 5 | Create [safedb.net RubyGem Credentials](https://rubygems.org/gems/safedb) Kubernetes Secret
+## Step 7 | Create [safedb.net RubyGem Credentials](https://rubygems.org/gems/safedb) Kubernetes Secret
 
 The **[safedb.net rubygem.org credentials](https://rubygems.org/gems/safedb)** will be used by the ruby release gem instigated by the **[kubernetes Jenkins release pod](https://github.com/devops4me/safedb.net/blob/master/pod-image-release.yaml)** to deploy the packaged gem to the public gem repository.
 
