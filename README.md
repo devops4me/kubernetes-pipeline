@@ -150,6 +150,34 @@ Note that
 
 Within the Jenkinsfile we need to take care of a number of issues.
 
+```
+        stage('Release to RubyGems.org')
+        {
+            agent
+            {
+                kubernetes
+                {
+                    yamlFile 'pod-image-release.yaml'
+                }
+            }
+            when {  environment name: 'GIT_BRANCH', value: 'origin/master' }
+            steps
+            {
+                container('safehaven')
+                {
+                    checkout scm
+                    sh 'mkdir -p $HOME/.ssh && cp $HOME/gitsshconfig/config $HOME/.ssh/config'
+                    sh 'git config --global user.email apolloakora@gmail.com'
+                    sh 'git config --global user.name "Apollo Akora"'
+                    sh 'ssh -i $HOME/gitsshkey/safedb.code.private.key.pem -vT git@safedb.code || true'
+                    sh 'git remote set-url --push origin git@safedb.code:devops4me/safedb.net.git'
+                    sh 'gem bump minor --tag --push --release --file=$PWD/lib/version.rb'
+                }
+            }
+        }
+```
+
+
 ### Verify the Git SSH Credentials
 
 We verify the git push credentials within the **[safedb.net Jenkinsfile](https://github.com/devops4me/safedb.net/blob/master/Jenkinsfile)** in the rubygem deploy stage right before the **`gem bump --release`** command.
@@ -167,6 +195,10 @@ The **[safedb.net Jenkinsfile](https://github.com/devops4me/safedb.net/blob/mast
 ### Running Without Credentials
 
 It is important for Jenkins jobs to complete safely without credentials as long as they are not in a given branch (usually master). This allows the team to run the jobs locally from development branches without a deployment happening.
+
+### ssh command exits with status 1
+
+Even when the ssh trial login command succeeds it still exits with return code 1 so we put **`|| true`** to prevent it failing the build.
 
 
 ---
