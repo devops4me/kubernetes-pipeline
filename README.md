@@ -86,15 +86,21 @@ safe open <<chapter>> <<verse>>
 safe open github devops4me
 safe write github.ssh.config # remove any extraneous config sections
 safe write safedb.code.private.key
-chmod 600 safedb.code.private.key.pem
 kubectl create secret generic safegitsshconfig \
     --from-file=config=$PWD/config
 rm config
 kubectl create secret generic safegitsshkey \
     --from-file=safedb.code.private.key.pem=$PWD/safedb.code.private.key.pem
 rm safedb.code.private.key.pem
+safe open rubygems.org do4me
+safe write rubygems.org.credentials
+kubectl create secret generic saferubygemscreds \
+    --from-file=credentials=$PWD/credentials
+rm credentials
+safe logout
 kubectl get secret safegitsshconfig --output=yaml
 kubectl get secret safegitsshkey --output=yaml
+kubectl get secret saferubygemscreds --output=yaml
 ```
 
 ## Step 5 | Check the Pod Yaml Definitions
@@ -112,13 +118,15 @@ spec:
         -   name: CONTAINER_ENV_VAR
             value: jnlp
     -   name: safehaven
-        image: devops4me/haven:latest
+        image: devops4me/rubygem:latest
         imagePullPolicy: Always
         volumeMounts:
         -   name: gitsshconfig
             mountPath: /root/gitsshconfig
         -   name: gitsshkey
             mountPath: /root/gitsshkey
+        -   name: gemcreds
+            mountPath: /root/gemcredentials
         command:
         -   cat
         tty: true
@@ -133,6 +141,9 @@ spec:
             secret:
                 secretName: safegitsshkey
                 defaultMode: 256
+        -   name: gemcreds
+            secret:
+                secretName: saferubygemscreds
 ```
 
 ### Important Points
@@ -167,11 +178,13 @@ Within the Jenkinsfile we need to take care of a number of issues.
                 {
                     checkout scm
                     sh 'mkdir -p $HOME/.ssh && cp $HOME/gitsshconfig/config $HOME/.ssh/config'
+                    sh 'mkdir -p $HOME/.gem && cp $HOME/gemcredentials/credentials $HOME/.gem/credentials'
                     sh 'git config --global user.email apolloakora@gmail.com'
                     sh 'git config --global user.name "Apollo Akora"'
                     sh 'ssh -i $HOME/gitsshkey/safedb.code.private.key.pem -vT git@safedb.code || true'
                     sh 'git remote set-url --push origin git@safedb.code:devops4me/safedb.net.git'
-                    sh 'gem bump minor --tag --push --release --file=$PWD/lib/version.rb'
+                    sh 'git branch && git checkout master'
+                    sh 'gem bump minor --tag --release --file=$PWD/lib/version.rb'
                 }
             }
         }
